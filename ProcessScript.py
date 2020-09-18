@@ -70,7 +70,7 @@ def extract_component_from_h5_to_pcd(h5_file="",
 
 def surface_mesh_delaunay(surface_mesh_file="",
                           visual=False,
-                          visual_sub_grid=False,
+                          visual_sub_grid=True,
                           save_file=""):
     """Perform surface mesh deaunay.
 
@@ -88,7 +88,10 @@ def surface_mesh_delaunay(surface_mesh_file="",
     # don't work for now
     tet = tetgen.TetGen(surface_mesh)
     # bug: cannot run correctly
-    tet.tetrahedralize(nobisect=True)
+    tet.tetrahedralize(nobisect=True,
+                       quality=False,
+                       order=1,
+                       verbose=1)
 
     # save the tet grid mesh
     if (save_file is not ""):
@@ -108,18 +111,11 @@ def surface_mesh_delaunay(surface_mesh_file="",
 
         # not work now
         if (visual_sub_grid is True):
-            # get cell centroids
-            # cells = tet_grid.cells.reshape(-1, 1)[:, 1:]
-            # cell_center = tet_grid.points[cells].mean(1)
-            # extract cells below the 0 xy plane
-            # mask = cell_center[:, 2] < 0
-            # cell_ind = mask .nonzero()[0]
-            # sub_tet_grid = tet_grid.extract_cells(cell_ind)
-            # advanced plotting
-            # plotter.add_mesh(sub_tet_grid, 'lightgrey', lighting=True, show_edges=True)
-            plotter.add_mesh(tet.grid, show_edges=True)
+            mask = np.logical_or(tet.grid.points[:, 0] < 0, tet.grid.points[:, 0] > 80)
+            half_cow = tet.grid.extract_points(mask)
+            plotter.add_mesh(half_cow, 'lightgrey', lighting=True, show_edges=True)
         else:
-            plotter.add_mesh(tet.grid, opacity=0.8, show_edges=True)
+            plotter.add_mesh(tet.grid, 'lightgrey', lighting=True, show_edges=True)
 
         plotter.show()
 
