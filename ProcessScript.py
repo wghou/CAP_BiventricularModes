@@ -140,6 +140,13 @@ def surface_mesh_delaunay(surface_mesh_file="",
             "Mesh")
         vtkelements.tofile(save_file)
 
+        import meshio
+        import pathlib
+        mesh = meshio.read(save_file)
+        filename = pathlib.Path(save_file)
+        meshio.tetgen.write(filename.stem + ".node", mesh)
+
+
     # visualize the surface mesh & tet grid
     if (visual is True):
         plotter = pv.Plotter()
