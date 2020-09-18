@@ -20,10 +20,25 @@ import open3d as o3d
 import pyvista as pv
 import tetgen
 
-# extract point cloud from the h5 file
-def extract_component_from_h5_to_pcd(h5_file="", index=0, visual=False, save_file=""):
 
-    assert(h5_file is not "")
+def extract_component_from_h5_to_pcd(h5_file="",
+                                     index=0,
+                                     visual=False,
+                                     save_file=""):
+    """ extract point cloud from the h5 file
+
+    Parameters
+    ----------
+    h5_file : str
+        The name of the h5 file which contains the ventricular model data
+    index : int
+        The index of which component extrict
+    visul : bool
+        Wheather plot visualization or not
+    save_file: str
+        The file name which store the data extracted form the h5 file
+    """
+    assert (h5_file is not "")
 
     # read H5 file
     pc = h5.File(h5_file, 'r')
@@ -45,18 +60,29 @@ def extract_component_from_h5_to_pcd(h5_file="", index=0, visual=False, save_fil
     pcd.estimate_normals()
 
     # save point cloud file, such as .pcd, .xyz
-    if(save_file is not ""):
+    if (save_file is not ""):
         o3d.io.write_point_cloud(save_file, pcd)
 
     # visualize the point cloud
-    if(visual is True):
-        o3d.visualization.draw_geometries([pcd], width=1024, height=768, left=100, top=100)
+    if (visual is True):
+        o3d.visualization.draw_geometries([pcd],
+                                          width=1024,
+                                          height=768,
+                                          left=100,
+                                          top=100)
 
     # return the point cloud object
     return pcd
 
-# doesn't work for now
+
 def convert_to_surface_mesh(pcd, visual=False, save_file=""):
+    """ convert the point cloud into surface mesh
+        But, it doesn't work for now
+    
+    Parameters
+    ----------
+    pcd : o3d.geometry.PointCloud()
+    """
     # some calculation
     distances = pcd.compute_nearest_neighbor_distance()
     avg_dist = np.mean(distances)
@@ -64,24 +90,38 @@ def convert_to_surface_mesh(pcd, visual=False, save_file=""):
 
     # convert the point cloud to triangle surface mesh
     mesh = o3d.geometry.TriangleMesh.create_from_point_cloud_ball_pivoting(
-                pcd,
-                o3d.utility.DoubleVector([radius, radius * 2]))
+        pcd, o3d.utility.DoubleVector([radius, radius * 2]))
 
     # save surface file, such as .ply
-    if(save_file is not ""):
+    if (save_file is not ""):
         o3d.io.write_triangle_mesh(save_file, mesh)
 
     # visualize the surface mesh
-    if(visual is True):
-        o3d.visualization.draw_geometries([mesh], width=1024, height=768, left=100, top=100, mesh_show_wireframe=True, mesh_show_back_face=True)
+    if (visual is True):
+        o3d.visualization.draw_geometries([mesh],
+                                          width=1024,
+                                          height=768,
+                                          left=100,
+                                          top=100,
+                                          mesh_show_wireframe=True,
+                                          mesh_show_back_face=True)
 
     # return the surface mesh object
     return mesh
 
 
-def surface_mesh_delaunay(surface_mesh_file="", visual=False, visual_sub_grid=False, save_file=""):
+def surface_mesh_delaunay(surface_mesh_file="",
+                          visual=False,
+                          visual_sub_grid=False,
+                          save_file=""):
+    """Perform surface mesh deaunay.
 
-    assert(surface_mesh_file is not "")
+    Parameters
+    ----------
+    surface_mesh_file : str
+        The file which contains the surface mesh
+    """
+    assert (surface_mesh_file is not "")
 
     # read surface mesh file from .ply
     surface_mesh = pv.PolyData(surface_mesh_file)
@@ -92,24 +132,29 @@ def surface_mesh_delaunay(surface_mesh_file="", visual=False, visual_sub_grid=Fa
     tet.tetrahedralize(nobisect=True)
     tet_grid = tet.grid
 
+    node = tet.node
+    elem = tet.elem
+
+    node.write("SS")
+
     # save the tet grid mesh
-    if(save_file is not ""):
+    if (save_file is not ""):
         tet.write(save_file)
 
     # visualize the surface mesh & tet grid
-    if(visual is True):
+    if (visual is True):
         plotter = pv.Plotter()
         plotter.add_mesh(surface_mesh, 'r', 'wireframe')
 
         # not work now
-        if(visual_sub_grid is True):
+        if (visual_sub_grid is True):
             # get cell centroids
-            #cells = tet_grid.cells.reshape(-1, 1)[:, 1:]
-            #cell_center = tet_grid.points[cells].mean(1)
+            # cells = tet_grid.cells.reshape(-1, 1)[:, 1:]
+            # cell_center = tet_grid.points[cells].mean(1)
             # extract cells below the 0 xy plane
-            #mask = cell_center[:, 2] < 0
-            #cell_ind = mask .nonzero()[0]
-            #sub_tet_grid = tet_grid.extract_cells(cell_ind)
+            # mask = cell_center[:, 2] < 0
+            # cell_ind = mask .nonzero()[0]
+            # sub_tet_grid = tet_grid.extract_cells(cell_ind)
             # advanced plotting
             #plotter.add_mesh(sub_tet_grid, 'lightgrey', lighting=True, show_edges=True)
             plotter.add_mesh(tet_grid, show_edges=False)
@@ -126,8 +171,8 @@ def surface_mesh_delaunay(surface_mesh_file="", visual=False, visual_sub_grid=Fa
 if __name__ == '__main__':
 
     # step 1: extract cardiac component from the h5 file
-    pcd = extract_component_from_h5_to_pcd(h5_file="UKBRVLV.h5", visual=False)
-
+    pcd = extract_component_from_h5_to_pcd(h5_file="data//UKBRVLV.h5",
+                                           visual=False)
 
     # step 2: divide the biventricular model into three parts: the LV-Endocardium, the RV-Endocaridum, and the Epicardium
     pcd_lve = pcd.select_by_index(range(0, 1500))
@@ -146,5 +191,6 @@ if __name__ == '__main__':
     #
 
     # step 5: convert the surface into tetrahedronal mesh with pyTetGen
-    surface_mesh_delaunay("Ventricular.ply", visual=True, save_file="Ventricular_tet.vtk")
-
+    surface_mesh_delaunay("data//Ventricular.ply",
+                          visual=True,
+                          save_file="data//Ventricular_tet.vtk")
