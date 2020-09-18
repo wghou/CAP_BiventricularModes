@@ -13,13 +13,10 @@
 # /MU: N elements vector that defines the mean shape of the biventricular model.
 
 import h5py as h5
-import sys
 import numpy as np
-from scipy.spatial import Delaunay
 import open3d as o3d
 import pyvista as pv
 import tetgen
-
 
 def extract_component_from_h5_to_pcd(h5_file="",
                                      index=0,
@@ -132,14 +129,16 @@ def surface_mesh_delaunay(surface_mesh_file="",
     tet.tetrahedralize(nobisect=True)
     tet_grid = tet.grid
 
-    node = tet.node
-    elem = tet.elem
-
-    node.write("SS")
-
     # save the tet grid mesh
     if (save_file is not ""):
-        tet.write(save_file)
+        import pyvtk
+        vtkelements = pyvtk.VtkData(
+            pyvtk.UnstructuredGrid(
+                points=tet.node,
+                tetra=tet.elem.reshape(-1, 4)
+            ),
+            "Mesh")
+        vtkelements.tofile(save_file)
 
     # visualize the surface mesh & tet grid
     if (visual is True):
@@ -156,7 +155,7 @@ def surface_mesh_delaunay(surface_mesh_file="",
             # cell_ind = mask .nonzero()[0]
             # sub_tet_grid = tet_grid.extract_cells(cell_ind)
             # advanced plotting
-            #plotter.add_mesh(sub_tet_grid, 'lightgrey', lighting=True, show_edges=True)
+            # plotter.add_mesh(sub_tet_grid, 'lightgrey', lighting=True, show_edges=True)
             plotter.add_mesh(tet_grid, show_edges=False)
         else:
             plotter.add_mesh(tet_grid, show_edges=False)

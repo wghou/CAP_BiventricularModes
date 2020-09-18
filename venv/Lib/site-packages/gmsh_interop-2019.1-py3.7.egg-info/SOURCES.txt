@@ -1,0 +1,14 @@
+MANIFEST.in
+README.rst
+setup.cfg
+setup.py
+gmsh_interop/__init__.py
+gmsh_interop/reader.py
+gmsh_interop/runner.py
+gmsh_interop/version.py
+gmsh_interop.egg-info/PKG-INFO
+gmsh_interop.egg-info/SOURCES.txt
+gmsh_interop.egg-info/dependency_links.txt
+gmsh_interop.egg-info/requires.txt
+gmsh_interop.egg-info/top_level.txt
+test/test_gmsh.py
