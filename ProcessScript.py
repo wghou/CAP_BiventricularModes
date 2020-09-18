@@ -14,7 +14,6 @@
 
 import h5py as h5
 import numpy as np
-import open3d as o3d
 import pyvista as pv
 import tetgen
 
@@ -52,59 +51,21 @@ def extract_component_from_h5_to_pcd(h5_file="",
     points = np.reshape(S[0, 0:N], (-1, 3))
 
     # convert to point cloud
-    pcd = o3d.geometry.PointCloud()
-    pcd.points = o3d.utility.Vector3dVector(points)
-    pcd.estimate_normals()
+    point_cloud = pv.PolyData(points)
+    point_cloud.compute_normals()
 
-    # save point cloud file, such as .pcd, .xyz
+    # save point cloud file, such as .ply
     if (save_file is not ""):
-        o3d.io.write_point_cloud(save_file, pcd)
+        point_cloud.save(save_file, binary=False)
 
     # visualize the point cloud
     if (visual is True):
-        o3d.visualization.draw_geometries([pcd],
-                                          width=1024,
-                                          height=768,
-                                          left=100,
-                                          top=100)
+        plotter = pv.Plotter()
+        plotter.add_mesh(point_cloud)
+        plotter.show()
 
     # return the point cloud object
-    return pcd
-
-
-def convert_to_surface_mesh(pcd, visual=False, save_file=""):
-    """ convert the point cloud into surface mesh
-        But, it doesn't work for now
-    
-    Parameters
-    ----------
-    pcd : o3d.geometry.PointCloud()
-    """
-    # some calculation
-    distances = pcd.compute_nearest_neighbor_distance()
-    avg_dist = np.mean(distances)
-    radius = 1 * avg_dist
-
-    # convert the point cloud to triangle surface mesh
-    mesh = o3d.geometry.TriangleMesh.create_from_point_cloud_ball_pivoting(
-        pcd, o3d.utility.DoubleVector([radius, radius * 2]))
-
-    # save surface file, such as .ply
-    if (save_file is not ""):
-        o3d.io.write_triangle_mesh(save_file, mesh)
-
-    # visualize the surface mesh
-    if (visual is True):
-        o3d.visualization.draw_geometries([mesh],
-                                          width=1024,
-                                          height=768,
-                                          left=100,
-                                          top=100,
-                                          mesh_show_wireframe=True,
-                                          mesh_show_back_face=True)
-
-    # return the surface mesh object
-    return mesh
+    return point_cloud
 
 
 def surface_mesh_delaunay(surface_mesh_file="",
@@ -126,8 +87,8 @@ def surface_mesh_delaunay(surface_mesh_file="",
     # execute tetgen
     # don't work for now
     tet = tetgen.TetGen(surface_mesh)
+    # bug: cannot run correctly
     tet.tetrahedralize(nobisect=True)
-    tet_grid = tet.grid
 
     # save the tet grid mesh
     if (save_file is not ""):
@@ -139,13 +100,6 @@ def surface_mesh_delaunay(surface_mesh_file="",
             ),
             "Mesh")
         vtkelements.tofile(save_file)
-
-        import meshio
-        import pathlib
-        mesh = meshio.read(save_file)
-        filename = pathlib.Path(save_file)
-        meshio.tetgen.write(filename.stem + ".node", mesh)
-
 
     # visualize the surface mesh & tet grid
     if (visual is True):
@@ -163,14 +117,14 @@ def surface_mesh_delaunay(surface_mesh_file="",
             # sub_tet_grid = tet_grid.extract_cells(cell_ind)
             # advanced plotting
             # plotter.add_mesh(sub_tet_grid, 'lightgrey', lighting=True, show_edges=True)
-            plotter.add_mesh(tet_grid, show_edges=False)
+            plotter.add_mesh(tet.grid, show_edges=True)
         else:
-            plotter.add_mesh(tet_grid, show_edges=False)
+            plotter.add_mesh(tet.grid, opacity=0.8, show_edges=True)
 
         plotter.show()
 
     # return the tet grid
-    return tet_grid
+    return tet.node, tet.elem
 
 
 # Press the green button in the gutter to run the script.
@@ -181,14 +135,9 @@ if __name__ == '__main__':
                                            visual=False)
 
     # step 2: divide the biventricular model into three parts: the LV-Endocardium, the RV-Endocaridum, and the Epicardium
-    pcd_lve = pcd.select_by_index(range(0, 1500))
-    pcd_rve = pcd.select_by_index(range(1501, 3224))
-    pcd_ep = pcd.select_by_index(range(3225, np.shape(pcd.points)[0]))
-    # save & visualize these three parts
-    # o3d.io.write_point_cloud("pcd_lve.xyz", pcd_lve)
-    # o3d.io.write_point_cloud("pcd_lve.xyz", pcd_lve)
-    # o3d.io.write_point_cloud("pcd_lve.xyz", pcd_lve)
-    # o3d.visualization.draw_geometries([pcd], width=1024, height=768, left=100, top=100)
+    # pv.PolyData(pcd.points[0:1500]).save("data//pcd_lve.ply", binary=False)
+    # pv.PolyData(pcd.points[1501:3224]).save("data//pcd_rve.ply", binary=False)
+    # pv.PolyData(pcd.points[3225:-1]).save("data//pcd_eve.ply", binary=False)
 
     # step 3: convert the point cloud file (.xyz) into surface mesh with MeshLab
     # the surface mesh is stored in .ply file
